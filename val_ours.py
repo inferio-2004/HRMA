@@ -120,6 +120,7 @@ def main():
     ppv_avg_meter = AverageMeter()
     sensitivity_avg_meter = AverageMeter()
     hausdorff_distance_avg_meter = AverageMeter()
+    pixel_accuracy_avg=AverageMeter()
     asd_avg_meter = AverageMeter()
     gput = AverageMeter()
     cput = AverageMeter()
@@ -136,12 +137,14 @@ def main():
             output = model(input)
 
             iou, dice = iou_score(output, target)
+            pa=pixel_accuracy(ouput,target)
             pp_v = ppv(output, target)
             sen_sitivity = sensitivity(output, target)
 
             iou_avg_meter.update(iou, input.size(0))
             dice_avg_meter.update(dice, input.size(0))
             ppv_avg_meter.update(pp_v, input.size(0))
+            pixel_accuracy_avg.update(pa,input.size(0))
             sensitivity_avg_meter.update(sen_sitivity, input.size(0))
 
             output = torch.sigmoid(output).cpu().numpy()
@@ -174,6 +177,7 @@ def main():
     print('sensitivity: %.4f' % sensitivity_avg_meter.avg)
     print('hausdorffdistance: %.4f' % hausdorff_distance_avg_meter.avg)
     print('avg: %.4f' % asd_avg_meter.avg)
+    print('pa: %.4f' % pixel_accuracy_avg.avg)
 
     torch.cuda.empty_cache()
 
