@@ -16,7 +16,7 @@ from tqdm import tqdm
 # import archs
 import losses
 from dataset import Dataset
-from metrics import iou_score
+from metrics import iou_score,pixel_accuracy
 from utils import AverageMeter, str2bool
 from config import get_ClusterSeg_config
 
@@ -148,7 +148,8 @@ def train(config, train_loader, model, criterion, optimizer):
 def validate(config, val_loader, model, criterion):
     avg_meters = {'loss': AverageMeter(),
                   'iou': AverageMeter(),
-                  'dice': AverageMeter()}
+                  'dice': AverageMeter(),
+                  'pixel_accuracy':AverageMeter()}
 
     # switch to evaluate mode
     model.eval()
@@ -167,19 +168,23 @@ def validate(config, val_loader, model, criterion):
                     loss += criterion(output, target)
                 loss /= len(outputs)
                 iou, dice = iou_score(outputs[-1], target)
+                pa = pixel_accuracy(outputs[-1], target)
             else:
                 output = model(input)
                 loss = criterion(output, target)
                 iou, dice = iou_score(output, target)
+                pa = pixel_accuracy(output, target)
 
             avg_meters['loss'].update(loss.item(), input.size(0))
             avg_meters['iou'].update(iou, input.size(0))
             avg_meters['dice'].update(dice, input.size(0))
+            avg_meters['pixel_accuracy'].update(pa, input.size(0))
 
             postfix = OrderedDict([
                 ('loss', avg_meters['loss'].avg),
                 ('iou', avg_meters['iou'].avg),
-                ('dice', avg_meters['dice'].avg)
+                ('dice', avg_meters['dice'].avg),
+                ('pixel_accuracy', avg_meters['pixel_accuracy'].avg)
             ])
             pbar.set_postfix(postfix)
             pbar.update(1)
@@ -187,7 +192,9 @@ def validate(config, val_loader, model, criterion):
 
     return OrderedDict([('loss', avg_meters['loss'].avg),
                         ('iou', avg_meters['iou'].avg),
-                        ('dice', avg_meters['dice'].avg)])
+                        ('dice', avg_meters['dice'].avg),
+                        ('pixel_accuracy', avg_meters['pixel_accuracy'].avg)
+                       ])
 
 
 def main():
