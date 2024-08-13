@@ -19,25 +19,26 @@ from config import get_ClusterSeg_config
 
 def parse_args():
     parser = argparse.ArgumentParser()
+    parser.add_argument('--name', default="CANS2", help='model name')
+    parser.add_argument('--dataset', default='LiTS', help='dataset name')
+    parser.add_argument('--data_dir', default='/kaggle/input/lits-dataset', help='path to dataset directory')
+    parser.add_argument('--img_ext', default='.png', help='image file extension')
+    parser.add_argument('--mask_ext', default='.png', help='mask file extension')
+    parser.add_argument('--suffix', default='_woDS', help='model suffix')
 
-    parser.add_argument('--name', default="CANS2",
-                        help='model name')
-    parser.add_argument('--dataset',default='pancreas256_')
-    parser.add_argument('--suffix',default='_woDS')
-    # parser.add_argument('--version',default='version_3.0_')
-    args = parser.parse_args()
+    return parser.parse_args()
+
 
     return args
 
 
 def main():
     args = parse_args()
-    dataset_model = args.dataset+args.name+args.suffix
-    # args.version
+    dataset_model = args.dataset + args.name + args.suffix
     network_name = args.name
 
+    # Network version control code (unchanged)
     network_version = None
-    ## 网络拷贝代码
     nvc = os.path.join('./network_version_controll/')
     list_nvc = os.listdir(nvc)
     for dir_name in list_nvc:
@@ -45,9 +46,9 @@ def main():
             if network_name == dir_name.split('_')[-1]:
                 network_version = dir_name
                 break
-    # 如果是单个文件将版本号的内容复制过来
-    path = os.path.join('./network_version_controll/', network_version)
 
+    # Copy network files
+    path = os.path.join('./network_version_controll/', network_version)
     is_file = True
     for filename in os.listdir(path):
         if os.path.isdir(os.path.join(path, filename)):
@@ -56,7 +57,8 @@ def main():
             is_file = False
             path = os.path.join(path, filename)
             break
-    if is_file is True:
+
+    if is_file:
         origin_path = os.path.join('./network_version_controll/', network_version, args.name + '.py')
         target_path = os.path.join('./Modules/General_Network.py')
         shutil.copyfile(origin_path, target_path)
@@ -69,8 +71,7 @@ def main():
                 target_path = os.path.join('./Modules/', filename)
             shutil.copyfile(origin_path, target_path)
 
-    # end of copy
-
+    # Load config
     with open('models/%s/config.yml' % dataset_model, 'r') as f:
         config = yaml.load(f, Loader=yaml.FullLoader)
 
@@ -90,9 +91,12 @@ def main():
         model = model_val()
     model = model.cuda()
 
-    # Data loading code
-    img_ids = glob(os.path.join('inputs', config['dataset'], 'test_vol_h5', '*' + config['img_ext']))
+    # Data loading code for PNG files
+    img_ids = glob(os.path.join(args.data_dir, 'test_vol_h5', '*' + args.img_ext))
     img_ids = [os.path.splitext(os.path.basename(p))[0] for p in img_ids]
+
+    imgs = [np.array(Image.open(os.path.join(args.data_dir, 'test_vol_h5', img_id + args.img_ext)).convert('L')) for img_id in img_ids]
+    masks = [np.array(Image.open(os.path.join(args.data_dir, 'test_vol_h5', img_id + args.mask_ext)).convert('L')) for img_id in img_ids]
 
     _, val_img_ids = train_test_split(img_ids, test_size=0.9, random_state=41)
 
